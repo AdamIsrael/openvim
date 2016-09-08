@@ -32,6 +32,7 @@ def group_openvim_user():
     status_set("maintenance", "Adding OpenVIM user to groups")
     add_user_to_group('openvim', 'libvirtd')
     add_user_to_group('openvim', 'sudo')
+    add_user_to_group('openvim', 'kvm')
 
 def nopasswd_openvim_sudo():
     status_set("maintenance", "Allowing nopasswd sudo for OpenVIM user")
