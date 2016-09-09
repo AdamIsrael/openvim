@@ -24,7 +24,10 @@ from charmhelpers.contrib.unison import (
     create_private_key,
     create_public_key,
     ensure_user,
+    run_as_user,
 )
+
+USER = "openvim"
 
 
 def sh(cmd):
@@ -42,7 +45,7 @@ def create_openvim_user():
 
 def initialize_openvim_database(db):
     status_set("maintenance", "Initializing OpenVIM database")
-    sh_as_openvim("/opt/openmano/openvim/database_utils/init_vim_db.sh -u %s -p %s -d %s -h %s" % (
+    sh_as_openvim("/opt/openvim/database_utils/init_vim_db.sh -u %s -p %s -d %s -h %s" % (
         db.user(),
         db.password(),
         db.database(),
@@ -54,7 +57,7 @@ def generate_ssh_key():
     status_set("maintenance", "Generating ssh key")
     user = "openvim"
     folder = "/home/%s/.ssh" % user
-    mkdir(folder, owner=user, group=user, perms=0o775)
+    mkdir(folder, owner=user, group=user, perms=0o700)
     private_path = "%s/id_rsa" % folder
     public_path = "%s.pub" % private_path
     create_private_key(user, private_path)
@@ -64,24 +67,33 @@ def generate_ssh_key():
 def add_openvim_to_path():
     status_set("maintenance", "Adding OpenVIM to path")
     symlink(
-        '/opt/openmano/scripts/service-openmano.sh',
-        '/usr/bin/service-openmano')
-    symlink('/opt/openmano/openvim/openvim', '/usr/bin/openvim')
+        '/opt/openvim/scripts/service-vim.sh',
+        '/usr/bin/service-openvim')
+    symlink('/opt/openvim/openvim', '/usr/bin/openvim')
 
 
 def download_openvim():
     status_set("maintenance", "Downloading OpenVIM")
-    if os.path.isdir("/opt/openmano"):
-        rmtree("/opt/openmano")
-    gitrepo.clone_from('https://github.com/tvansteenburgh/openmano.git', '/opt/openmano')
-    chownr('/opt/openmano', owner='openvim', group='openvim', follow_links=False, chowntopdir=True)
+    if os.path.isdir("/opt/openvim"):
+        rmtree("/opt/openvim")
+    gitrepo.clone_from(
+        'https://github.com/AdamIsrael/openvim.git',
+        '/opt/openvim'
+    )
+    chownr(
+        '/opt/openvim',
+        owner='openvim',
+        group='openvim',
+        follow_links=False,
+        chowntopdir=True
+    )
 
 
 def configure_openvim(db):
     status_set("maintenance", "Configuring OpenVIM")
     render(
         source="openvimd.cfg",
-        target="/opt/openmano/openvim/openvimd.cfg",
+        target="/opt/openvim/openvimd.cfg",
         owner="openvim",
         perms=0o664,
         context={"db": db}

@@ -3,7 +3,7 @@ Description=openvim
 
 [Service]
 User=openvim
-ExecStart=/opt/openmano/openvim/openvimd.py -c /opt/openmano/openvim/openvimd.cfg
+ExecStart=/opt/openvim/openvimd.py -c /opt/openvim/openvimd.cfg
 Restart=always
 
 [Install]
