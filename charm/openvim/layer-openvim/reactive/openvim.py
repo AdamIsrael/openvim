@@ -8,9 +8,10 @@ from shutil import rmtree
 from charms.reactive import when, when_not, set_state
 from charmhelpers.core.templating import render
 from charmhelpers.core.hookenv import (
-    status_set,
+    config,
     leader_set,
     leader_get,
+    status_set,
     unit_public_ip,
 )
 from charmhelpers.core.unitdata import kv
@@ -24,8 +25,9 @@ from charmhelpers.contrib.unison import (
     create_private_key,
     create_public_key,
     ensure_user,
-    run_as_user,
 )
+
+cfg = config()
 
 USER = "openvim"
 
@@ -77,8 +79,9 @@ def download_openvim():
     if os.path.isdir("/opt/openvim"):
         rmtree("/opt/openvim")
     gitrepo.clone_from(
-        'https://github.com/AdamIsrael/openvim.git',
-        '/opt/openvim'
+        cfg['repository'],
+        '/opt/openvim',
+        cfg['branch'],
     )
     chownr(
         '/opt/openvim',
