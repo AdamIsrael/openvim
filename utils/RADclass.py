@@ -38,6 +38,8 @@ import paramiko
 import re
 import yaml
 
+global config_dict
+
 
 def getCredentials(creds, data):
     """Used as a backup for libvirt.openAuth in order to provide password that came with data,
@@ -969,11 +971,12 @@ def get_memory_information(ssh_conn, virsh_conn, memory_nodes):
 
     #Fill memory nodes
     #Hugepage size is constant for all nodes
-    hugepage_sz = get_hugepage_size(ssh_conn)
-    for node_id, modules in memory_dict.iteritems():
-        memory_node = MemoryNode()
-        memory_node.set(modules, hugepage_sz, get_hugepage_nr(ssh_conn,hugepage_sz, node_id))
-        memory_nodes[node_id] = memory_node
+    if config_dict['mode'] != "development":
+        hugepage_sz = get_hugepage_size(ssh_conn)
+        for node_id, modules in memory_dict.iteritems():
+            memory_node = MemoryNode()
+            memory_node.set(modules, hugepage_sz, get_hugepage_nr(ssh_conn,hugepage_sz, node_id))
+            memory_nodes[node_id] = memory_node
 
     return (True, warning_text)
 
