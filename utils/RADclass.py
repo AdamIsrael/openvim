@@ -38,8 +38,6 @@ import paramiko
 import re
 import yaml
 
-global config_dict
-
 
 def getCredentials(creds, data):
     """Used as a backup for libvirt.openAuth in order to provide password that came with data,
@@ -122,7 +120,7 @@ class RADclass():
 
             #Get the server memory information
             memory_nodes = dict()
-            (return_status, code) = get_memory_information(ssh_conn, virsh_conn, memory_nodes)
+            (return_status, code) = get_memory_information(config_dic, ssh_conn, virsh_conn, memory_nodes)
             if not return_status:
                 return (return_status, 'Error at get_memory_information in '+machine+': '+code)
             warning_text += code
@@ -886,7 +884,7 @@ def get_hugepage_nr(ssh_conn,hugepage_sz, node_id):
         value=0
     return value
 
-def get_memory_information(ssh_conn, virsh_conn, memory_nodes):
+def get_memory_information(config_dic, ssh_conn, virsh_conn, memory_nodes):
     warning_text=""
     tree=ElementTree.fromstring(virsh_conn.getSysinfo(0))
     memory_dict = dict()
@@ -971,7 +969,7 @@ def get_memory_information(ssh_conn, virsh_conn, memory_nodes):
 
     #Fill memory nodes
     #Hugepage size is constant for all nodes
-    if config_dict['mode'] != "development":
+    if config_dic['mode'] != "development":
         hugepage_sz = get_hugepage_size(ssh_conn)
         for node_id, modules in memory_dict.iteritems():
             memory_node = MemoryNode()

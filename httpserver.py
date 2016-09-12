@@ -22,7 +22,7 @@
 ##
 
 '''
-This is the thread for the http server North API. 
+This is the thread for the http server North API.
 Two thread will be launched, with normal and administrative permissions.
 '''
 
@@ -51,20 +51,20 @@ global config_dic
 url_base="/openvim"
 
 HTTP_Bad_Request =          400
-HTTP_Unauthorized =         401 
-HTTP_Not_Found =            404 
+HTTP_Unauthorized =         401
+HTTP_Not_Found =            404
 HTTP_Forbidden =            403
-HTTP_Method_Not_Allowed =   405 
+HTTP_Method_Not_Allowed =   405
 HTTP_Not_Acceptable =       406
 HTTP_Request_Timeout =      408
 HTTP_Conflict =             409
-HTTP_Service_Unavailable =  503 
-HTTP_Internal_Server_Error= 500 
+HTTP_Service_Unavailable =  503
+HTTP_Internal_Server_Error= 500
 
 
 def check_extended(extended, allow_net_attach=False):
     '''Makes and extra checking of extended input that cannot be done using jsonschema
-    Attributes: 
+    Attributes:
         allow_net_attach:  for allowing or not the uuid field at interfaces
         that are allowed for instance, but not for flavors
     Return: (<0, error_text) if error; (0,None) if not error '''
@@ -83,26 +83,26 @@ def check_extended(extended, allow_net_attach=False):
             nb_formats += 1
             if "threads-id" in numa:
                 if len(numa["threads-id"]) != numa["threads"]:
-                    return -HTTP_Bad_Request, "different number of threads-id (%d) than threads (%d) at numa %d" % (len(numa["threads-id"]), numa["threads"],numaid) 
+                    return -HTTP_Bad_Request, "different number of threads-id (%d) than threads (%d) at numa %d" % (len(numa["threads-id"]), numa["threads"],numaid)
                 id_s.extend(numa["threads-id"])
         if "paired-threads" in numa:
             nb_formats += 1
             if "paired-threads-id" in numa:
                 if len(numa["paired-threads-id"]) != numa["paired-threads"]:
-                    return -HTTP_Bad_Request, "different number of paired-threads-id (%d) than paired-threads (%d) at numa %d" % (len(numa["paired-threads-id"]), numa["paired-threads"],numaid) 
+                    return -HTTP_Bad_Request, "different number of paired-threads-id (%d) than paired-threads (%d) at numa %d" % (len(numa["paired-threads-id"]), numa["paired-threads"],numaid)
                 for pair in numa["paired-threads-id"]:
                     if len(pair) != 2:
-                        return -HTTP_Bad_Request, "paired-threads-id must contain a list of two elements list at numa %d" % (numaid) 
+                        return -HTTP_Bad_Request, "paired-threads-id must contain a list of two elements list at numa %d" % (numaid)
                     id_s.extend(pair)
         if nb_formats > 1:
-            return -HTTP_Service_Unavailable, "only one of cores, threads,  paired-threads are allowed in this version at numa %d" % numaid 
+            return -HTTP_Service_Unavailable, "only one of cores, threads,  paired-threads are allowed in this version at numa %d" % numaid
         #check interfaces
         if "interfaces" in numa:
             ifaceid=0
             names=[]
             vpcis=[]
             for interface in numa["interfaces"]:
-                if "uuid" in interface and not allow_net_attach: 
+                if "uuid" in interface and not allow_net_attach:
                     return -HTTP_Bad_Request, "uuid field is not allowed at numa %d interface %s position %d" % (numaid, interface.get("name",""), ifaceid )
                 if "mac_address" in interface and interface["dedicated"]=="yes":
                     return -HTTP_Bad_Request, "mac_address can not be set for dedicated (passthrough) at numa %d, interface %s position %d" % (numaid, interface.get("name",""), ifaceid )
@@ -117,11 +117,11 @@ def check_extended(extended, allow_net_attach=False):
                 ifaceid+=1
         numaid+=1
     if numaid > 1:
-        return -HTTP_Service_Unavailable, "only one numa can be defined in this version " 
+        return -HTTP_Service_Unavailable, "only one numa can be defined in this version "
     for a in range(0,len(id_s)):
         if a not in id_s:
-            return -HTTP_Bad_Request, "core/thread identifiers must start at 0 and gaps are not alloed. Missing id number %d" % a 
-    
+            return -HTTP_Bad_Request, "core/thread identifiers must start at 0 and gaps are not alloed. Missing id number %d" % a
+
     return 0, None
 
 #
@@ -152,12 +152,12 @@ def remove_extra_items(data, schema):
     if len(deleted) == 0: return None
     elif len(deleted) == 1: return deleted[0]
     else: return deleted
-                
+
 def delete_nulls(var):
     if type(var) is dict:
         for k in var.keys():
             if var[k] is None: del var[k]
-            elif type(var[k]) is dict or type(var[k]) is list or type(var[k]) is tuple: 
+            elif type(var[k]) is dict or type(var[k]) is list or type(var[k]) is tuple:
                 if delete_nulls(var[k]): del var[k]
         if len(var) == 0: return True
     elif type(var) is list or type(var) is tuple:
@@ -176,12 +176,12 @@ class httpserver(threading.Thread):
             name: name of this thread
             host: ip or name where to listen
             port: port where to listen
-            admin: if this has privileges of administrator or not 
-            config_: unless the first thread must be provided. It is a global dictionary where to allocate the self variable 
+            admin: if this has privileges of administrator or not
+            config_: unless the first thread must be provided. It is a global dictionary where to allocate the self variable
         '''
         global url_base
         global config_dic
-        
+
         #initialization
         if config_ is not None:
             config_dic = config_
@@ -189,7 +189,7 @@ class httpserver(threading.Thread):
             config_dic['http_threads'] = {}
         threading.Thread.__init__(self)
         self.host = host
-        self.port = port  
+        self.port = port
         self.db = db_conn
         self.admin = admin
         if name in config_dic:
@@ -203,12 +203,12 @@ class httpserver(threading.Thread):
         config_dic['http_threads'][name] = self
 
         #Ensure that when the main program exits the thread will also exit
-        self.daemon = True      
+        self.daemon = True
         self.setDaemon(True)
-         
+
     def run(self):
         bottle.run(host=self.host, port=self.port, debug=True) #quiet=True
-           
+
     def gethost(self, host_id):
         result, content = self.db.get_host(host_id)
         if result < 0:
@@ -226,7 +226,7 @@ class httpserver(threading.Thread):
 
 @bottle.route(url_base + '/', method='GET')
 def http_get():
-    print 
+    print
     return 'works' #TODO: put links or redirection to /openvim???
 
 #
@@ -295,7 +295,7 @@ def format_in(schema):
         return client_data
     except (ValueError, yaml.YAMLError) as exc:
         error_text += str(exc)
-        print error_text 
+        print error_text
         bottle.abort(HTTP_Bad_Request, error_text)
     except js_e.ValidationError as exc:
         print "HTTP validate_in error, jsonschema exception ", exc.message, "at", exc.path
@@ -341,21 +341,21 @@ def filter_query_string(qs, http2db, allowed):
                 if k not in allowed:
                     bottle.abort(HTTP_Bad_Request, "Invalid query string at '"+k+"="+qs[k]+"'")
                 if qs[k]!="null":  where[k]=qs[k]
-                else: where[k]=None 
+                else: where[k]=None
     if len(select)==0: select += allowed
     #change from http api to database naming
     for i in range(0,len(select)):
         k=select[i]
-        if k in http2db: 
+        if k in http2db:
             select[i] = http2db[k]
     change_keys_http2db(where, http2db)
     #print "filter_query_string", select,where,limit
-    
+
     return select,where,limit
 
 
 def convert_bandwidth(data, reverse=False):
-    '''Check the field bandwidth recursively and when found, it removes units and convert to number 
+    '''Check the field bandwidth recursively and when found, it removes units and convert to number
     It assumes that bandwidth is well formed
     Attributes:
         'data': dictionary bottle.FormsDict variable to be checked. None or empty is considered valid
@@ -389,7 +389,7 @@ def convert_bandwidth(data, reverse=False):
                 convert_bandwidth(k, reverse)
 
 def convert_boolean(data, items):
-    '''Check recursively the content of data, and if there is an key contained in items, convert value from string to boolean 
+    '''Check recursively the content of data, and if there is an key contained in items, convert value from string to boolean
     It assumes that bandwidth is well formed
     Attributes:
         'data': dictionary bottle.FormsDict variable to be checked. None or empty is consideted valid
@@ -418,7 +418,7 @@ def convert_datetime2str(var):
         for k,v in var.items():
             if type(v) is datetime.datetime:
                 var[k]= v.strftime('%Y-%m-%dT%H:%M:%S')
-            elif type(v) is dict or type(v) is list or type(v) is tuple: 
+            elif type(v) is dict or type(v) is list or type(v) is tuple:
                 convert_datetime2str(v)
         if len(var) == 0: return True
     elif type(var) is list or type(var) is tuple:
@@ -444,14 +444,14 @@ def check_valid_uuid(uuid):
         return False
 
 @bottle.error(400)
-@bottle.error(401) 
-@bottle.error(404) 
+@bottle.error(401)
+@bottle.error(404)
 @bottle.error(403)
-@bottle.error(405) 
+@bottle.error(405)
 @bottle.error(406)
 @bottle.error(408)
 @bottle.error(409)
-@bottle.error(503) 
+@bottle.error(503)
 @bottle.error(500)
 def error400(error):
     e={"error":{"code":error.status_code, "type":error.status, "description":error.body}}
@@ -470,7 +470,7 @@ def enable_cors():
 def http_get_hosts():
     select_,where_,limit_ = filter_query_string(bottle.request.query, http2db_host,
             ('id','name','description','status','admin_state_up') )
-    
+
     myself = config_dic['http_threads'][ threading.current_thread().name ]
     result, content = myself.db.get_table(FROM='hosts', SELECT=select_, WHERE=where_, LIMIT=limit_)
     if result < 0:
@@ -496,7 +496,7 @@ def http_post_hosts():
     #check permissions
     if not my.admin:
         bottle.abort(HTTP_Unauthorized, "Needed admin privileges")
-    
+
     #parse input data
     http_content = format_in( host_new_schema )
     r = remove_extra_items(http_content, host_new_schema)
@@ -517,9 +517,9 @@ def http_post_hosts():
 
         #fill rad info
         rad = RADclass.RADclass()
-        (return_status, code) = rad.obtain_RAD(user, password, ip_name)
-        
-        #return 
+        (return_status, code) = rad.obtain_RAD(config_dic, user, password, ip_name)
+
+        #return
         if not return_status:
             print 'http_post_hosts ERROR obtaining RAD', code
             bottle.abort(HTTP_Bad_Request, code)
@@ -530,8 +530,8 @@ def http_post_hosts():
         print json.dumps(rad_structure, indent=4)
         print '---------------------'
         #return
-        WHERE_={"family":rad_structure['processor']['family'], 'manufacturer':rad_structure['processor']['manufacturer'], 'version':rad_structure['processor']['version']} 
-        result, content = my.db.get_table(FROM='host_ranking', 
+        WHERE_={"family":rad_structure['processor']['family'], 'manufacturer':rad_structure['processor']['manufacturer'], 'version':rad_structure['processor']['version']}
+        result, content = my.db.get_table(FROM='host_ranking',
                     SELECT=('ranking',),
                     WHERE=WHERE_)
         if result > 0:
@@ -542,11 +542,11 @@ def http_post_hosts():
             #return
             warning_text += "Host " + str(WHERE_)+ " not found in ranking table. Assuming lowest value 100\n"
             host['ranking'] = 100 #TODO: as not used in this version, set the lowest value
-    
+
         features = rad_structure['processor'].get('features', ())
         host['features'] = ",".join(features)
-        host['numas'] = [] 
-        
+        host['numas'] = []
+
         for node in (rad_structure['resource topology']['nodes'] or {}).itervalues():
             interfaces= []
             cores = []
@@ -559,9 +559,9 @@ def http_post_hosts():
                     c={'core_id': count, 'thread_id': thread_id}
                     if thread_id not in eligible_cores: c['status'] = 'noteligible'
                     cores.append(c)
-                count = count+1 
+                count = count+1
 
-            if 'nics' in node:    
+            if 'nics' in node:
                 for port_k, port_v in node['nics']['nic 0']['ports'].iteritems():
                     if port_v['virtual']:
                         continue
@@ -573,7 +573,7 @@ def http_post_hosts():
                         if len(sriovs)>0:
                             #sort sriov according to pci and rename them to the vf number
                             new_sriovs = sorted(sriovs, key=lambda k: k['pci'])
-                            index=0 
+                            index=0
                             for sriov in new_sriovs:
                                 sriov['source_name'] = index
                                 index += 1
@@ -593,7 +593,7 @@ def http_post_hosts():
             host_test_mode = True if config_dic['mode']=='test' or config_dic['mode']=="OF only" else False
             host_develop_mode = True if config_dic['mode']=='development' else False
             host_develop_bridge_iface = config_dic.get('development_bridge', None)
-            thread = ht.host_thread(name=host.get('name',ip_name), user=user, host=ip_name, db=config_dic['db'], db_lock=config_dic['db_lock'], 
+            thread = ht.host_thread(name=host.get('name',ip_name), user=user, host=ip_name, db=config_dic['db'], db_lock=config_dic['db_lock'],
                 test=host_test_mode, image_path=config_dic['image_path'],
                 version=config_dic['version'], host_id=content['uuid'],
                 develop_mode=host_develop_mode, develop_bridge_iface=host_develop_bridge_iface   )
@@ -617,7 +617,7 @@ def http_put_host_id(host_id):
     #check permissions
     if not my.admin:
         bottle.abort(HTTP_Unauthorized, "Needed admin privileges")
-    
+
     #parse input data
     http_content = format_in( host_edit_schema )
     r = remove_extra_items(http_content, host_edit_schema)
@@ -718,13 +718,13 @@ def http_post_tenants():
 
     #insert in data base
     result, content = my.db.new_tenant(http_content['tenant'])
-            
+
     if result >= 0:
         return http_get_tenant_id(content)
     else:
         bottle.abort(-result, content)
         return
-    
+
 @bottle.route(url_base + '/tenants/<tenant_id>', method='PUT')
 def http_put_tenant_id(tenant_id):
     '''update a tenant into the database.'''
@@ -827,7 +827,7 @@ def http_get_flavor_id(tenant_id, flavor_id):
         change_keys_http2db(content, http2db_flavor, reverse=True)
         if 'extended' in content[0] and content[0]['extended'] is not None:
             extended = json.loads(content[0]['extended'])
-            if 'devices' in extended: 
+            if 'devices' in extended:
                 change_keys_http2db(extended['devices'], http2db_flavor, reverse=True)
             content[0]['extended']=extended
         convert_bandwidth(content[0], reverse=True)
@@ -850,7 +850,7 @@ def http_post_flavors(tenant_id):
     if r is not None: print "http_post_flavors: Warning: remove extra items ", r
     change_keys_http2db(http_content['flavor'], http2db_flavor)
     extended_dict = http_content['flavor'].pop('extended', None)
-    if extended_dict is not None: 
+    if extended_dict is not None:
         result, content = check_extended(extended_dict)
         if result<0:
             print "http_post_flavors wrong input extended error %d %s" % (result, content)
@@ -867,7 +867,7 @@ def http_post_flavors(tenant_id):
         print "http_psot_flavors error %d %s" % (result, content)
         bottle.abort(-result, content)
         return
-    
+
 @bottle.route(url_base + '/<tenant_id>/flavors/<flavor_id>', method='DELETE')
 def http_delete_flavor_id(tenant_id, flavor_id):
     '''Deletes the flavor_id of a tenant. IT removes from tenants_flavors table.'''
@@ -904,7 +904,7 @@ def http_attach_detach_flavors(tenant_id, flavor_id, action):
         bottle.abort(HTTP_Method_Not_Allowed, "actions can be attach or detach")
         return
 
-    #Ensure that flavor exist 
+    #Ensure that flavor exist
     from_  ='tenants_flavors as tf right join flavors as f on tf.flavor_id=f.uuid'
     where_={'uuid': flavor_id}
     result, content = my.db.get_table(SELECT=('public','tenant_id'), FROM=from_, WHERE=where_)
@@ -938,7 +938,7 @@ def http_attach_detach_flavors(tenant_id, flavor_id, action):
                     my.db.delete_row_by_dict(FROM='flavors', WHERE={'uuid':flavor_id})
                 data={'result' : "flavor detached"}
                 return format_out(data)
-    
+
     #if get here is because an error
     print "http_attach_detach_flavors error %d %s" % (result, content)
     bottle.abort(-result, content)
@@ -958,7 +958,7 @@ def http_put_flavor_id(tenant_id, flavor_id):
     if r is not None: print "http_put_flavor_id: Warning: remove extra items ", r
     change_keys_http2db(http_content['flavor'], http2db_flavor)
     extended_dict = http_content['flavor'].pop('extended', None)
-    if extended_dict is not None: 
+    if extended_dict is not None:
         result, content = check_extended(extended_dict)
         if result<0:
             print "http_put_flavor_id wrong input extended error %d %s" % (result, content)
@@ -967,7 +967,7 @@ def http_put_flavor_id(tenant_id, flavor_id):
         convert_bandwidth(extended_dict)
         if 'devices' in extended_dict: change_keys_http2db(extended_dict['devices'], http2db_flavor)
         http_content['flavor']['extended'] = json.dumps(extended_dict)
-    #Ensure that flavor exist 
+    #Ensure that flavor exist
     where_={'uuid': flavor_id}
     if tenant_id=='any':
         from_  ='flavors'
@@ -1075,7 +1075,7 @@ def http_post_images(tenant_id):
     if r is not None: print "http_post_images: Warning: remove extra items ", r
     change_keys_http2db(http_content['image'], http2db_image)
     metadata_dict = http_content['image'].pop('metadata', None)
-    if metadata_dict is not None: 
+    if metadata_dict is not None:
         http_content['image']['metadata'] = json.dumps(metadata_dict)
     #insert in data base
     result, content = my.db.new_image(http_content['image'], tenant_id)
@@ -1085,7 +1085,7 @@ def http_post_images(tenant_id):
         print "http_post_images error %d %s" % (result, content)
         bottle.abort(-result, content)
         return
-    
+
 @bottle.route(url_base + '/<tenant_id>/images/<image_id>', method='DELETE')
 def http_delete_image_id(tenant_id, image_id):
     '''Deletes the image_id of a tenant. IT removes from tenants_images table.'''
@@ -1121,7 +1121,7 @@ def http_attach_detach_images(tenant_id, image_id, action):
         bottle.abort(HTTP_Method_Not_Allowed, "actions can be attach or detach")
         return
 
-    #Ensure that image exist 
+    #Ensure that image exist
     from_  ='tenants_images as ti right join images as i on ti.image_id=i.uuid'
     where_={'uuid': image_id}
     result, content = my.db.get_table(SELECT=('public','tenant_id'), FROM=from_, WHERE=where_)
@@ -1155,7 +1155,7 @@ def http_attach_detach_images(tenant_id, image_id, action):
                     my.db.delete_row_by_dict(FROM='images', WHERE={'uuid':image_id})
                 data={'result' : "image detached"}
                 return format_out(data)
-    
+
     #if get here is because an error
     print "http_attach_detach_images error %d %s" % (result, content)
     bottle.abort(-result, content)
@@ -1175,9 +1175,9 @@ def http_put_image_id(tenant_id, image_id):
     if r is not None: print "http_put_image_id: Warning: remove extra items ", r
     change_keys_http2db(http_content['image'], http2db_image)
     metadata_dict = http_content['image'].pop('metadata', None)
-    if metadata_dict is not None: 
+    if metadata_dict is not None:
         http_content['image']['metadata'] = json.dumps(metadata_dict)
-    #Ensure that image exist 
+    #Ensure that image exist
     where_={'uuid': image_id}
     if tenant_id=='any':
         from_  ='images'
@@ -1255,20 +1255,20 @@ def http_get_server_id(tenant_id, server_id):
         if content["vcpus"]==0 : del content["vcpus"]
         if 'flavor_id' in content:
             if content['flavor_id'] is not None:
-                content['flavor'] = {'id':content['flavor_id'], 
-                                     'links':[{'href':  "/".join( (my.url_preffix, content['tenant_id'], 'flavors', str(content['flavor_id']) ) ), 'rel':'bookmark'}] 
+                content['flavor'] = {'id':content['flavor_id'],
+                                     'links':[{'href':  "/".join( (my.url_preffix, content['tenant_id'], 'flavors', str(content['flavor_id']) ) ), 'rel':'bookmark'}]
                                 }
             del content['flavor_id']
         if 'image_id' in content:
             if content['image_id'] is not None:
-                content['image'] = {'id':content['image_id'], 
+                content['image'] = {'id':content['image_id'],
                                     'links':[{'href':  "/".join( (my.url_preffix, content['tenant_id'], 'images', str(content['image_id']) ) ), 'rel':'bookmark'}]
                                 }
             del content['image_id']
         change_keys_http2db(content, http2db_server, reverse=True)
         if 'extended' in content:
             if 'devices' in content['extended']: change_keys_http2db(content['extended']['devices'], http2db_server, reverse=True)
-            
+
         data={'server' : content}
         return format_out(data)
     else:
@@ -1324,7 +1324,7 @@ def http_post_server_id(tenant_id):
             bottle.abort(HTTP_Not_Found, 'hostId %s not found' % server['host_id'])
             return
     #print json.dumps(server, indent=4)
-     
+
     result, content = ht.create_server(server, config_dic['db'], config_dic['db_lock'], config_dic['mode']=='normal')
 
     if result >= 0:
@@ -1354,9 +1354,9 @@ def http_post_server_id(tenant_id):
             if r < 0:
                 print ':http_post_servers ERROR UPDATING NETS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' +  c
 
-            
-            
-        #look for dhcp ip address 
+
+
+        #look for dhcp ip address
         r2, c2 = my.db.get_table(FROM="ports", SELECT=["mac", "net_id"], WHERE={"instance_id": new_instance})
         if r2 >0 and config_dic.get("dhcp_server"):
             for iface in c2:
@@ -1364,21 +1364,21 @@ def http_post_server_id(tenant_id):
                     #print "dhcp insert add task"
                     r,c = config_dic['dhcp_thread'].insert_task("add", iface["mac"])
                     if r < 0:
-                        print ':http_post_servers ERROR UPDATING dhcp_server !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' +  c 
-        
+                        print ':http_post_servers ERROR UPDATING dhcp_server !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' +  c
+
     #Start server
-        
+
         server['uuid'] = new_instance
         #server_start = server.get('start', 'yes')
         if server_start != 'no':
-            server['paused'] = True if server_start == 'paused' else False 
+            server['paused'] = True if server_start == 'paused' else False
             server['action'] = {"start":None}
             server['status'] = "CREATING"
             #Program task
             r,c = config_dic['host_threads'][ server['host_id'] ].insert_task( 'instance',server )
             if r<0:
                 my.db.update_rows('instances', {'status':"ERROR"}, {'uuid':server['uuid'], 'last_error':c}, log=True)
-        
+
         return http_get_server_id(tenant_id, new_instance)
     else:
         bottle.abort(HTTP_Bad_Request, content)
@@ -1451,10 +1451,10 @@ def http_server_action(server_id, tenant_id, action):
                     else:
                         bottle.abort(HTTP_Not_Found, 'more than one disk found for server' )
                         return
-                    image_id = disk_id    
+                    image_id = disk_id
                 else: #result==1
-                    image_id = content[0]['image_id']    
-                
+                    image_id = content[0]['image_id']
+
         result, content = my.db.get_table(FROM='tenants_images as ti join images as i on ti.image_id=i.uuid',
             SELECT=('path','metadata'), WHERE={'uuid':image_id, 'tenant_id':tenant_id, "status":"ACTIVE"})
         if result<=0:
@@ -1494,7 +1494,7 @@ def http_server_action(server_id, tenant_id, action):
             return
         server['new_image'] = new_image
 
-                
+
     #Program task
     r,c = config_dic['host_threads'][ server['host_id'] ].insert_task( 'instance',server )
     if r<0:
@@ -1502,13 +1502,13 @@ def http_server_action(server_id, tenant_id, action):
         bottle.abort(HTTP_Request_Timeout, c)
     if 'createImage' in action and result >= 0:
         return http_get_image_id(tenant_id, image_uuid)
-    
+
     #Update DB only for CREATING or DELETING status
     data={'result' : 'in process'}
     if new_status != None and new_status == 'DELETING':
         nets=[]
         ports_to_free=[]
-        #look for dhcp ip address 
+        #look for dhcp ip address
         r2, c2 = my.db.get_table(FROM="ports", SELECT=["mac", "net_id"], WHERE={"instance_id": server_id})
         r,c = my.db.delete_instance(server_id, tenant_id, nets, ports_to_free, "requested by http")
         for port in ports_to_free:
@@ -1521,14 +1521,14 @@ def http_server_action(server_id, tenant_id, action):
             if r1 < 0:
                 print ' http_post_server_action error at server deletion ERROR UPDATING NETS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' +  c1
                 data={'result' : 'deleting in process, but openflow rules cannot be deleted!!!!!'}
-        #look for dhcp ip address 
+        #look for dhcp ip address
         if r2 >0 and config_dic.get("dhcp_server"):
             for iface in c2:
                 if iface["net_id"] in config_dic["dhcp_nets"]:
                     r,c = config_dic['dhcp_thread'].insert_task("del", iface["mac"])
                     #print "dhcp insert del task"
                     if r < 0:
-                        print ':http_post_servers ERROR UPDATING dhcp_server !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' +  c 
+                        print ':http_post_servers ERROR UPDATING dhcp_server !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' +  c
 
     return format_out(data)
 
@@ -1546,7 +1546,7 @@ def http_delete_server_id(tenant_id, server_id):
 
     return http_server_action(server_id, tenant_id, {"terminate":None} )
 
-    
+
 @bottle.route(url_base + '/<tenant_id>/servers/<server_id>/action', method='POST')
 def http_post_server_action(tenant_id, server_id):
     '''take an action over a server'''
@@ -1559,7 +1559,7 @@ def http_post_server_action(tenant_id, server_id):
     http_content = format_in( server_action_schema )
     #r = remove_extra_items(http_content, server_action_schema)
     #if r is not None: print "http_post_server_action: Warning: remove extra items ", r
-    
+
     return http_server_action(server_id, tenant_id, http_content)
 
 #
@@ -1583,8 +1583,8 @@ def http_get_networks():
         bottle.abort(-result, content)
     else:
         convert_boolean(content, ('shared', 'admin_state_up', 'enable_dhcp') )
-        delete_nulls(content)      
-        change_keys_http2db(content, http2db_network, reverse=True)  
+        delete_nulls(content)
+        change_keys_http2db(content, http2db_network, reverse=True)
         data={'networks' : content}
         return format_out(data)
 
@@ -1604,13 +1604,13 @@ def http_get_network_id(network_id):
         bottle.abort(HTTP_Not_Found, 'network %s not found' % network_id)
     else:
         convert_boolean(content, ('shared', 'admin_state_up', 'enale_dhcp') )
-        change_keys_http2db(content, http2db_network, reverse=True)        
+        change_keys_http2db(content, http2db_network, reverse=True)
         #get ports
-        result, ports = my.db.get_table(FROM='ports', SELECT=('uuid as port_id',), 
+        result, ports = my.db.get_table(FROM='ports', SELECT=('uuid as port_id',),
                                               WHERE={'net_id': network_id}, LIMIT=100)
         if len(ports) > 0:
             content[0]['ports'] = ports
-        delete_nulls(content[0])      
+        delete_nulls(content[0])
         data={'network' : content[0]}
         return format_out(data)
 
@@ -1639,18 +1639,18 @@ def http_post_networks():
     net_bind_net = network.get("bind_net")
     net_bind_type= network.get("bind_type")
     name = network["name"]
-    
+
     #check if network name ends with :<vlan_tag> and network exist in order to make and automated bindning
     vlan_index =name.rfind(":")
-    if net_bind_net==None and net_bind_type==None and vlan_index > 1: 
+    if net_bind_net==None and net_bind_type==None and vlan_index > 1:
         try:
             vlan_tag = int(name[vlan_index+1:])
             if vlan_tag >0 and vlan_tag < 4096:
                 net_bind_net = name[:vlan_index]
                 net_bind_type = "vlan:" + name[vlan_index+1:]
         except:
-            pass 
-        
+            pass
+
     if net_bind_net != None:
         #look for a valid net
         if check_valid_uuid(net_bind_net):
@@ -1676,7 +1676,7 @@ def http_post_networks():
             bottle.abort(HTTP_Bad_Request, "bad format for 'bind_type', must be 'vlan:<tag>' with a tag between 1 and 4095")
             return
         network["bind_type"] = net_bind_type
-    
+
     if net_provider!=None:
         if net_provider[:9]=="openflow:":
             if net_type!=None:
@@ -1690,10 +1690,10 @@ def http_post_networks():
                     bottle.abort(HTTP_Bad_Request, "Only 'bridge_man' or 'bridge_data' net types can be bound to 'bridge', 'macvtap' or 'default")
             else:
                 net_type='bridge_man'
-    
+
     if net_type==None:
-        net_type='bridge_man' 
-        
+        net_type='bridge_man'
+
     if net_provider != None:
         if net_provider[:7]=='bridge:':
             #check it is one of the pre-provisioned bridges
@@ -1706,7 +1706,7 @@ def http_post_networks():
                     bridge_net=brnet
                     net_vlan = brnet[1]
                     break
-#            if bridge_net==None:     
+#            if bridge_net==None:
 #                bottle.abort(HTTP_Bad_Request, "invalid 'provider:physical', bridge '%s' is not one of the provisioned 'bridge_ifaces' in the configuration file" % bridge_net_name)
 #                return
     elif net_type=='bridge_data' or net_type=='bridge_man':
@@ -1733,16 +1733,16 @@ def http_post_networks():
         if net_vlan < 0:
             bottle.abort(HTTP_Internal_Server_Error, "Error getting an available vlan")
             return
-    
+
     network['provider'] = net_provider
     network['type']     = net_type
     network['vlan']     = net_vlan
     result, content = my.db.new_row('nets', network, True, True)
-    
+
     if result >= 0:
         if bridge_net!=None:
             bridge_net[3] = content
-        
+
         if config_dic.get("dhcp_server"):
             if network["name"] in config_dic["dhcp_server"].get("nets", () ):
                 config_dic["dhcp_nets"].append(content)
@@ -1779,7 +1779,7 @@ def http_put_network_id(network_id):
         bottle.abort(HTTP_Not_Found, 'network %s not found' % network_id)
         return
     #get ports
-    nbports, content = my.db.get_table(FROM='ports', SELECT=('uuid as port_id',), 
+    nbports, content = my.db.get_table(FROM='ports', SELECT=('uuid as port_id',),
                                               WHERE={'net_id': network_id}, LIMIT=100)
     if result < 0:
         print "http_put_network_id error %d %s" % (result, network_old)
@@ -1853,7 +1853,7 @@ def http_put_network_id(network_id):
         bottle.abort(-result, content)
         return
 
-  
+
 @bottle.route(url_base + '/networks/<network_id>', method='DELETE')
 def http_delete_network_id(network_id):
     '''delete a network_id from the database.'''
@@ -1861,7 +1861,7 @@ def http_delete_network_id(network_id):
 
     #delete from the data base
     result, content = my.db.delete_row('nets', network_id )
-   
+
     if result == 0:
         bottle.abort(HTTP_Not_Found, content)
     elif result >0:
@@ -1917,7 +1917,7 @@ def http_put_openflow_id(network_id):
     if result < 0:
         bottle.abort(-result, content)
         return
-    
+
     for net in content:
         if net["type"]!="ptp" and net["type"]!="data":
             result-=1
@@ -1975,7 +1975,7 @@ def http_get_ports():
         return
     else:
         convert_boolean(content, ('admin_state_up',) )
-        delete_nulls(content)      
+        delete_nulls(content)
         change_keys_http2db(content, http2db_port, reverse=True)
         data={'ports' : content}
         return format_out(data)
@@ -1993,11 +1993,11 @@ def http_get_port_id(port_id):
         bottle.abort(HTTP_Not_Found, 'port %s not found' % port_id)
     else:
         convert_boolean(content, ('admin_state_up',) )
-        delete_nulls(content)      
+        delete_nulls(content)
         change_keys_http2db(content, http2db_port, reverse=True)
         data={'port' : content[0]}
         return format_out(data)
-    
+
 
 @bottle.route(url_base + '/ports', method='POST')
 def http_post_ports():
@@ -2025,7 +2025,7 @@ def http_post_ports():
     #insert in data base
     result, uuid = my.db.new_row('ports', port, True, True)
     if result > 0:
-        if 'net_id' in port: 
+        if 'net_id' in port:
             r,c = config_dic['of_thread'].insert_task("update-net", port['net_id'])
             if r < 0:
                 print "http_post_ports error while launching openflow rules"
@@ -2034,7 +2034,7 @@ def http_post_ports():
     else:
         bottle.abort(-result, uuid)
         return
-    
+
 @bottle.route(url_base + '/ports/<port_id>', method='PUT')
 def http_put_port_id(port_id):
     '''update a port_id into the database.'''
@@ -2061,19 +2061,19 @@ def http_put_port_id(port_id):
         if k in port_dict and not my.admin:
             bottle.abort(HTTP_Unauthorized, "Needed admin privileges for changing " + k)
             return
-    
+
     port=content[0]
     #change_keys_http2db(port, http2db_port, reverse=True)
     nets = []
     host_id = None
     result=1
     if 'net_id' in port_dict:
-        #change of net. 
+        #change of net.
         old_net = port.get('net_id', None)
         new_net = port_dict['net_id']
         if old_net != new_net:
-            
-            if new_net is not None: nets.append(new_net) #put first the new net, so that new openflow rules are created before removing the old ones 
+
+            if new_net is not None: nets.append(new_net) #put first the new net, so that new openflow rules are created before removing the old ones
             if old_net is not None: nets.append(old_net)
             if port['type'] == 'instance:bridge':
                 bottle.abort(HTTP_Forbidden, "bridge interfaces cannot be attached to a different net")
@@ -2086,7 +2086,7 @@ def http_put_port_id(port_id):
                 if new_net != None:
                     #check that new net has the correct type
                     result, new_net_dict = my.db.check_target_net(new_net, None, port['type'] )
-                
+
                 #change VLAN for SR-IOV ports
                 if result>=0 and port["type"]=="instance:data" and port["model"]=="VF": #TODO consider also VFnotShared
                     if new_net == None:
@@ -2099,27 +2099,27 @@ def http_put_port_id(port_id):
                         print "http_put_port_id database error", content
                     elif result>0:
                         host_id = content[0]["host_id"]
-    
+
     #insert in data base
     if result >= 0:
         result, content = my.db.update_rows('ports', port_dict, WHERE={'uuid': port_id}, log=False )
-        
+
     #Insert task to complete actions
-    if result > 0: 
+    if result > 0:
         for net_id in nets:
             r,v = config_dic['of_thread'].insert_task("update-net", net_id)
             if r<0: print "Error *********   http_put_port_id  update_of_flows: ", v
             #TODO Do something if fails
         if host_id != None:
             config_dic['host_threads'][host_id].insert_task("edit-iface", port_id, old_net, new_net)
-    
+
     if result >= 0:
         return http_get_port_id(port_id)
     else:
         bottle.abort(HTTP_Bad_Request, content)
         return
 
-  
+
 @bottle.route(url_base + '/ports/<port_id>', method='DELETE')
 def http_delete_port_id(port_id):
     '''delete a port_id from the database.'''
@@ -2131,7 +2131,7 @@ def http_delete_port_id(port_id):
     #Look for the previous port data
     where_ = {'uuid': port_id, "type": "external"}
     result, ports = my.db.get_table(WHERE=where_, FROM='ports',LIMIT=100)
-    
+
     if result<=0:
         print "http_delete_port_id port '%s' not found" % port_id
         bottle.abort(HTTP_Not_Found, 'port %s not found or device_owner is not external' % port_id)
@@ -2144,13 +2144,12 @@ def http_delete_port_id(port_id):
     elif result >0:
         network = ports[0].get('net_id', None)
         if network is not None:
-            #change of net. 
+            #change of net.
             r,c = config_dic['of_thread'].insert_task("update-net", network)
-            if r<0: print "!!!!!! http_delete_port_id update_of_flows error", r, c 
+            if r<0: print "!!!!!! http_delete_port_id update_of_flows error", r, c
         data={'result' : content}
         return format_out(data)
     else:
         print "http_delete_port_id error",result, content
         bottle.abort(-result, content)
     return
-    
