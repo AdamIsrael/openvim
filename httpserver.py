@@ -257,7 +257,8 @@ def change_keys_http2db(data, http_db, reverse=False):
 
 def format_out(data):
     '''return string of dictionary data according to requested json, yaml, xml. By default json'''
-    if 'application/yaml' in bottle.request.headers.get('Accept'):
+    mimetypes = bottle.request.headers.get('Accept')
+    if mimetimes and 'application/yaml' in mimetypes:
         bottle.response.content_type='application/yaml'
         return yaml.safe_dump(data, explicit_start=True, indent=4, default_flow_style=False, tags=False, encoding='utf-8', allow_unicode=True) #, canonical=True, default_style='"'
     else: #by default json
