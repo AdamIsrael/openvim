@@ -4,10 +4,12 @@ import time
 import subprocess
 from git import Repo as gitrepo
 from shutil import rmtree
+from urllib.parse import urljoin
 
 from charms.reactive import when, when_not, set_state
 from charmhelpers.core.templating import render
 from charmhelpers.core.hookenv import (
+    application_version_set,
     config,
     leader_set,
     leader_get,
@@ -26,6 +28,7 @@ from charmhelpers.contrib.unison import (
     create_public_key,
     ensure_user,
 )
+from charms.rest import RESTClient
 
 cfg = config()
 
@@ -78,10 +81,10 @@ def download_openvim():
     status_set("maintenance", "Downloading OpenVIM")
     if os.path.isdir("/opt/openvim"):
         rmtree("/opt/openvim")
-    gitrepo.clone_from(
+    repo = gitrepo.clone_from(
         cfg['repository'],
         '/opt/openvim',
-        cfg['branch'],
+        branch=cfg['branch'],
     )
     chownr(
         '/opt/openvim',
@@ -91,6 +94,10 @@ def download_openvim():
         chowntopdir=True
     )
 
+    # Set the application version, based the sha1sum of HEAD
+    revision = repo.rev_parse("HEAD").name_rev[:7]
+    application_version_set(revision)
+
 
 def configure_openvim(db):
     status_set("maintenance", "Configuring OpenVIM")
@@ -99,7 +106,7 @@ def configure_openvim(db):
         target="/opt/openvim/openvimd.cfg",
         owner="openvim",
         perms=0o664,
-        context={"db": db}
+        context={"db": db, "mode": cfg['mode']}
     )
 
 
@@ -263,26 +270,75 @@ def send_ssh_key(compute):
 @when('compute.available', 'openvim-controller.installed')
 def host_add(compute):
     cache = kv()
+
     for node in compute.authorized_nodes():
+
         if cache.get("compute:" + node['address']):
             continue
-        cmd = "ssh -n -o 'StrictHostKeyChecking no' %s@%s"
-        sh_as_openvim(cmd % (node['user'], node['address']))
-        data = {
-            'host': {
-                'name': 'compute-0',
-                'user': node['user'],
-                'ip_name': node['address'],
-                'description': 'compute-0'
+
+        # TODO: extend the controller interface to pass more information about the machine
+        # like hostname
+        openvim = OpenVimAPI()
+
+        # We need to set a unique name, because IP isn't easily parsed from
+        # the /hosts api
+        name = node['address'].replace(".", "-")
+
+        if name not in openvim.get_host_names():
+            cmd = "ssh -n -o 'StrictHostKeyChecking no' %s@%s"
+            sh_as_openvim(cmd % (node['user'], node['address']))
+            data = {
+                'host': {
+                    'name': name,
+                    'user': node['user'],
+                    'ip_name': node['address'],
+                    'description': name
+                }
             }
-        }
-        with open('/tmp/compute-0.json', 'w') as f:
-            json.dump(data, f, indent=4, sort_keys=True)
-        # TODO: openvim run function!
-        sh_as_openvim('openvim host-add /tmp/compute-0.json')
-        cache.set('compute:' + node['address'], True)
+            with open('/tmp/compute-0.json', 'w') as f:
+                json.dump(data, f, indent=4, sort_keys=True)
+            # TODO: openvim run function!
+            sh_as_openvim('openvim host-add /tmp/compute-0.json')
+            cache.set('compute:' + node['address'], True)
 
 
 @when('openvim-controller.available')
 def openvim_available(openvim):
     openvim.configure(port=9080, user=leader_get('tenant'))
+
+
+class OpenVimApi(RESTClient):
+    """ A wrapper around the OpenVIM API"""
+    uri = None
+    def __init__(self, host, port=80, ssl=False):
+        if host and port:
+            base = "http"
+            if ssl:
+                base = "https"
+
+            self.uri = "http://{}:{}".format(host, port)
+        pass
+
+    def hosts(self):
+        """Get a list of all available hosts"""
+        if self.uri:
+            url = urljoin(self.uri, "/openvim/hosts")
+            r = self.get(url)
+            if r.return_code == 200:
+                return r.json()
+            else:
+                return {}
+
+    def get_host_names(self):
+        names = []
+        hosts = self.hosts()
+        for host in hosts():
+            names.append(host['name'])
+        return names
+
+    def get_host_ids(self):
+        ids = []
+        hosts = self.hosts()
+        for host in hosts:
+            ids.append(host['id'])
+        return ids
