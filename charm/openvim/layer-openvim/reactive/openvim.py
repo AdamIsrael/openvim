@@ -211,6 +211,9 @@ def install_openvim_service():
     status_set("maintenance", "Installing OpenVIM service")
     if not os.path.exists('/etc/systemd/system'):
         os.makedirs('/etc/systemd/system')
+
+    # TODO: If you render a template that already exists,
+    # we need to call `systemctl daemon-reload`
     render(
         source="openvim.service",
         target="/etc/systemd/system/openvim.service",
@@ -296,7 +299,7 @@ def host_add(compute):
 
         # TODO: extend the controller interface to pass more information about the machine
         # like hostname
-        openvim = OpenVimAPI()
+        openvim = OpenVimApi("localhost", 9080)
 
         # We need to set a unique name, because IP isn't easily parsed from
         # the /hosts api
@@ -328,13 +331,14 @@ def openvim_available(openvim):
 class OpenVimApi(RESTClient):
     """ A wrapper around the OpenVIM API"""
     uri = None
+
     def __init__(self, host, port=80, ssl=False):
         if host and port:
             base = "http"
             if ssl:
                 base = "https"
 
-            self.uri = "http://{}:{}".format(host, port)
+            self.uri = "{}://{}:{}".format(base, host, port)
         pass
 
     def hosts(self):
@@ -342,7 +346,7 @@ class OpenVimApi(RESTClient):
         if self.uri:
             url = urljoin(self.uri, "/openvim/hosts")
             r = self.get(url)
-            if r.return_code == 200:
+            if r.status_code == 200:
                 return r.json()
             else:
                 return {}
