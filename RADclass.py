@@ -75,7 +75,7 @@ class RADclass():
         self.ports_list = list()            #List containing all network ports in the node. This is used to avoid having defined multiple times the same port in the system
 
 
-    def obtain_RAD(self, user, password, machine):
+    def obtain_RAD(self, config_dic, user, password, machine):
         """This function obtains the RAD information from the remote server.
         It uses both a ssh and a libvirt connection.
         It is desirable in future versions get rid of the ssh connection, but currently
