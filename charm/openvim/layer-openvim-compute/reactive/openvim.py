@@ -87,6 +87,8 @@ def install_ssh_key(compute):
         f.write(compute.ssh_key() + '\n')
 
     chmod('/home/openvim/.ssh/authorized_keys', 0o600)
+    chownr('/home/openvim/.ssh/authorized_keys', owner='openvim', group='openvim', follow_links=False, chowntopdir=True)
+
     compute.ssh_key_installed()
     cache.set("ssh_key:" + compute.ssh_key(), True)
 
