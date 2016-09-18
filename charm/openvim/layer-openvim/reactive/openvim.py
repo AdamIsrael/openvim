@@ -310,6 +310,7 @@ def openvim_available(openvim):
     openvim.configure(port=9080, user=leader_get('tenant'))
 
 
+# TODO: move this to it's own layer, perhaps?
 class OpenVimApi(RESTClient):
     """ A wrapper around the OpenVIM API"""
     uri = None
@@ -322,6 +323,79 @@ class OpenVimApi(RESTClient):
 
             self.uri = "{}://{}:{}".format(base, host, port)
         pass
+
+    # Server primitives
+
+    ###########
+    # Tenants #
+    ###########
+    def get_tenants():
+        pass
+
+    def get_tenant(tenant_id):
+        pass
+
+    def set_tenants():
+        pass
+
+    def set_tenant(tenant_id, tenant):
+        pass
+
+    ###########
+    # Flavors #
+    ###########
+    def get_flavors(tenant_id):
+        pass
+
+    def get_flavor(tenant_id, flavor_id):
+        pass
+
+    def set_flavors(tenant_id, flavors):
+        pass
+
+    def set_flavor(tenant_id, flavor_id, flavor):
+        pass
+
+    def delete_flavor(tenant_id, flavor_id):
+        pass
+
+    ##########
+    # Images #
+    ##########
+    def get_images(tenant_id):
+        pass
+
+    def get_image(tenant_id, image_id):
+        pass
+
+    def set_image(tenant_id, image_id, image):
+        pass
+
+    def delte_image(tenant_id, image_id):
+        pass
+
+    ###########
+    # Servers #
+    ###########
+    def get_servers(tenant_id):
+        pass
+
+    def get_server(tenant_id, server_id):
+        pass
+
+    def set_server(tenant_id, server_id, server):
+        pass
+
+    def set_server_action(tenant_id, server_id, action):
+        pass
+
+    def delete_server(tenant_id, server_id):
+        pass
+
+    # Network primitives
+
+
+    # Administrative primitives
 
     def hosts(self):
         """Get a list of all available hosts"""
@@ -336,13 +410,17 @@ class OpenVimApi(RESTClient):
     def get_host_names(self):
         names = []
         hosts = self.hosts()
-        for host in hosts():
+        for host in hosts['hosts']:
             names.append(host['name'])
         return names
 
     def get_host_ids(self):
         ids = []
         hosts = self.hosts()
-        for host in hosts:
+        for host in hosts['hosts']:
             ids.append(host['id'])
         return ids
+
+    # OpenFlow rules
+
+    # External ports
