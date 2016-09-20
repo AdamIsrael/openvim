@@ -33,6 +33,7 @@ from charmhelpers.core.hookenv import (
     leader_get,
     status_set,
     unit_public_ip,
+    open_port,
 )
 from charmhelpers.core.unitdata import kv
 from charmhelpers.core.host import (
@@ -278,6 +279,10 @@ def install_openvim_controller(mysql):
         'Up on {host}:{port}'.format(
             host=unit_public_ip(),
             port='9080'))
+
+    # TODO: Make API and Admin port configurable
+    open_port(9080)
+    open_port(9085)
     set_state('openvim-controller.installed')
 
 
@@ -297,8 +302,8 @@ def host_add(compute):
         if cache.get("compute:" + node['address']):
             continue
 
-        # TODO: extend the controller interface to pass more information about the machine
-        # like hostname
+        # TODO: extend the controller interface to pass more information about
+        # the machine like hostname
         openvim = OpenVimApi("localhost", 9080)
 
         # We need to set a unique name, because IP isn't easily parsed from
@@ -321,6 +326,12 @@ def host_add(compute):
             # TODO: openvim run function!
             sh_as_openvim('openvim host-add /tmp/compute-0.json')
             cache.set('compute:' + node['address'], True)
+
+
+# @when_not('compute.available')
+# def host_remove(compute):
+#     # TODO
+#     pass
 
 
 @when('openvim-controller.available')
