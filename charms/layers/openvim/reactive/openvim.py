@@ -53,6 +53,8 @@ cfg = config()
 
 USER = "openvim"
 
+# TODO: detect virtual machines and fail if they're not supported
+
 
 def sh(cmd):
     return subprocess.check_output(cmd, shell=True)
@@ -292,19 +294,34 @@ def send_ssh_key(compute):
         key = f.read().strip()
     compute.send_ssh_key(key)
 
+@when('openvim-controller.installed)')
+@when_not('compute.available')
+def host_remove(compute):
+    """Remove the compute nodes from the openvim controller"""
+    cache = kv()
+
+    # Connect to OpenVim's administrative port
+    openvim = OpenVimApi("localhost", 9085)
+
+    for node in compute.authorized_nodes():
+        id = cache.get("compute:" + node['address'])
+        if id:
+            openvim.host_delete(id)
+    status_set('waiting', 'MySQL database required')
+
+
 
 @when('compute.available', 'openvim-controller.installed')
 def host_add(compute):
     cache = kv()
 
+    # This requires the administrative interface
+    openvim = OpenVimApi("localhost", 9085)
+
     for node in compute.authorized_nodes():
 
         if cache.get("compute:" + node['address']):
             continue
-
-        # TODO: extend the controller interface to pass more information about
-        # the machine like hostname
-        openvim = OpenVimApi("localhost", 9080)
 
         # We need to set a unique name, because IP isn't easily parsed from
         # the /hosts api
@@ -313,25 +330,16 @@ def host_add(compute):
         if name not in openvim.get_host_names():
             cmd = "ssh -n -o 'StrictHostKeyChecking no' %s@%s"
             sh_as_openvim(cmd % (node['user'], node['address']))
-            data = {
-                'host': {
-                    'name': name,
-                    'user': node['user'],
-                    'ip_name': node['address'],
-                    'description': name
-                }
-            }
-            with open('/tmp/compute-0.json', 'w') as f:
-                json.dump(data, f, indent=4, sort_keys=True)
+
+            with open('/tmp/compute-0.yaml', 'w') as f:
+                f.write(node['config'])
             # TODO: openvim run function!
-            sh_as_openvim('openvim host-add /tmp/compute-0.json')
-            cache.set('compute:' + node['address'], True)
+            resp = openvim.host_add(node['config'])
+            id = resp['host']['id']
+            # sh_as_openvim('openvim host-add /tmp/compute-0.yanml')
 
-
-# @when_not('compute.available')
-# def host_remove(compute):
-#     # TODO
-#     pass
+            # TODO: capture the output of host-add and store the id
+            cache.set('compute:' + node['address'], id)
 
 
 @when('openvim-controller.available')
@@ -344,7 +352,7 @@ class OpenVimApi(RESTClient):
     """ A wrapper around the OpenVIM API"""
     uri = None
 
-    def __init__(self, host, port=80, ssl=False):
+    def __init__(self, host, port=9080, ssl=False):
         if host and port:
             base = "http"
             if ssl:
@@ -449,6 +457,24 @@ class OpenVimApi(RESTClient):
         for host in hosts['hosts']:
             ids.append(host['id'])
         return ids
+
+    def host_add(self, data):
+        """Add a host to OpenVim and return its id"""
+        if self.uri and data:
+            url = urljoin(self.uri, "/openvim/hosts")
+            headers = {'Content-Type': 'application/yaml'}
+            r = self.post(url, data, headers=headers)
+            if r.status_code == 200:
+                return r.json()
+            else:
+                return None
+
+    def host_delete(self, id):
+        """Delete a host from OpenVim"""
+        if self.uri and id:
+            url = urljoin(self.uri, "/openvim/hosts/{}".format(id))
+            self.delete(url)
+
 
     # OpenFlow rules
 
