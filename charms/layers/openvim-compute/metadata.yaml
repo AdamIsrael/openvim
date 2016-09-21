@@ -28,7 +28,7 @@ tags:
   - telco
   - osm
 series:
-  - xenial
+  - trusty
 extra-bindings:
   public:
   internal:
