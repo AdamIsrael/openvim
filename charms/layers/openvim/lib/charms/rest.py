@@ -9,5 +9,8 @@ class RESTClient:
     def get(self, uri):
         return requests.get(uri)
 
-    def post(self, uri, data):
-        return requests.post(uri, data=data)
+    def post(self, uri, data, headers={}):
+        return requests.post(uri, data=data, headers=headers)
+
+    def delete(self, uri):
+        return requests.delete(uri)
