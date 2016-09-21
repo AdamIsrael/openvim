@@ -18,11 +18,21 @@
 
 from os import chmod
 from charms.reactive import when, when_not, set_state
-from charmhelpers.core.hookenv import status_set
+from charmhelpers.core.hookenv import (
+    unit_private_ip,
+    status_set,
+)
 from charmhelpers.core.unitdata import kv
-from charmhelpers.core.host import mkdir, symlink, chownr, add_user_to_group
+from charmhelpers.core.host import (
+    mkdir,
+    symlink,
+    chownr,
+    add_user_to_group,
+)
 from charmhelpers.fetch.archiveurl import ArchiveUrlFetchHandler
 from charmhelpers.contrib.unison import ensure_user
+import subprocess
+
 
 def create_openvim_user():
     status_set("maintenance", "Creating OpenVIM user")
@@ -66,22 +76,50 @@ def download_default_image():
         # TODO: add checksum
     )
 
-@when_not('openvim-compute.installed')
+def configure_kernel():
+    """Configure the Kernel for hugepages/iommu/isolcpus
+    and reboot if necessary"""
+
+    try:
+        _run("scripts/configure-kernel.sh")
+        return True
+    except subprocess.CalledProcessError:
+        # if the kernel can't be configured, this machine won't work as a
+        # compute node and we should float that information back to the oper.
+        return False
+
+@when_not('openvim-compute.installed', 'openvim-compute.wrong-hardware')
 def prepare_openvim_compute():
-    create_openvim_user()
-    group_openvim_user()
-    nopasswd_openvim_sudo()
-    setup_qemu_binary()
-    setup_images_folder()
-    download_default_image()
-    status_set("active", "Ready")
-    set_state('openvim-compute.installed')
+    if configure_kernel():
+        create_openvim_user()
+        group_openvim_user()
+        nopasswd_openvim_sudo()
+        setup_qemu_binary()
+        setup_images_folder()
+        download_default_image()
+
+
+        status_set("active", "Ready")
+        set_state('openvim-compute.installed')
+    else:
+        status_set("blocked", "Insufficient/unsupported hardware detected.")
+        set_state('openvim-compute.wrong-hardware')
+
+
+@when('compute.available', 'openvim-compute.installed')
+def host_add(compute):
+    (config, _) = _run("scripts/host-add.sh openvim {}".format(unit_private_ip()))
+    compute.send_host_config(config)
+
 
 @when('compute.available', 'openvim-compute.installed')
 def install_ssh_key(compute):
     cache = kv()
     if cache.get("ssh_key:" + compute.ssh_key()):
+        compute.ssh_key_installed()
+        cache.set("ssh_key:" + compute.ssh_key(), True)
         return
+
     mkdir('/home/openvim/.ssh', owner='openvim', group='openvim', perms=0o700)
     with open("/home/openvim/.ssh/authorized_keys", 'a') as f:
         f.write(compute.ssh_key() + '\n')
@@ -95,3 +133,19 @@ def install_ssh_key(compute):
 @when('compute.connected')
 def send_user(compute):
     compute.send_user('openvim')
+
+def _run(cmd, env=None):
+    if isinstance(cmd, str):
+        cmd = cmd.split() if ' ' in cmd else [cmd]
+
+    p = subprocess.Popen(cmd,
+                         env=env,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
+    stdout, stderr = p.communicate()
+    retcode = p.poll()
+    if retcode > 0:
+        raise subprocess.CalledProcessError(returncode=retcode,
+                                            cmd=cmd,
+                                            output=stderr.decode("utf-8").strip())
+    return (stdout.decode('utf-8'), stderr.decode('utf-8'))
