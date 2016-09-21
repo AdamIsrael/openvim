@@ -44,3 +44,8 @@ class ProvidesOpenVIMCompute(RelationBase):
     def send_user(self, user):
         convo = self.conversation()
         convo.set_remote('user', user)
+
+    def send_host_config(self, config):
+        convo = self.conversation()
+        convo.set_remote('config', config)
+        convo.set_remote('host_configured', True)

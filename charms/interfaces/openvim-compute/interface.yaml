@@ -17,5 +17,5 @@
 ##
 
 name: openvim-compute
-version: 0
+version: 1
 description: Connection to an OpenVIM compute host

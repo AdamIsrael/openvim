@@ -43,7 +43,8 @@ class RequiresOpenVIMCompute(RelationBase):
         return [{
             'user': c.get_remote('user'),
             'address': c.get_remote('private-address'),
-        } for c in self.conversations() if c.get_remote('ssh_key_installed')]
+            'config': c.get_remote('config')
+        } for c in self.conversations() if c.get_remote('ssh_key_installed') and c.get_remote('host_configured')]
 
     def ready_to_ssh(self):
         return len(self.authorized_nodes()) > 0
