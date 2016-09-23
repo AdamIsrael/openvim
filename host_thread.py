@@ -961,7 +961,7 @@ class host_thread(threading.Thread):
             return            
         
         try:
-            conn = libvirt.open("qemu+ssh://"+self.user+"@"+self.host+"/system")
+            conn = libvirt.open("qemu+ssh://"+self.user+"@"+self.host+"/system?no_verify=1")
             domains=  conn.listAllDomains() 
             domain_dict={}
             for domain in domains:
@@ -1046,7 +1046,7 @@ class host_thread(threading.Thread):
                 self.create_image(None, req)
         else:
             try:
-                conn = libvirt.open("qemu+ssh://"+self.user+"@"+self.host+"/system")
+                conn = libvirt.open("qemu+ssh://"+self.user+"@"+self.host+"/system?no_verify=1")
                 try:
                     dom = conn.lookupByUUIDString(server_id)
                 except libvirt.libvirtError as e:
@@ -1232,7 +1232,7 @@ class host_thread(threading.Thread):
             return 0, None
         try:
             if not lib_conn:
-                conn = libvirt.open("qemu+ssh://"+self.user+"@"+self.host+"/system")
+                conn = libvirt.open("qemu+ssh://"+self.user+"@"+self.host+"/system?no_verify=1")
             else:
                 conn = lib_conn
                 
@@ -1333,7 +1333,7 @@ class host_thread(threading.Thread):
             
             try:
                 conn=None
-                conn = libvirt.open("qemu+ssh://"+self.user+"@"+self.host+"/system")
+                conn = libvirt.open("qemu+ssh://"+self.user+"@"+self.host+"/system?no_verify=1")
                 dom = conn.lookupByUUIDString(port["instance_id"])
                 if old_net:
                     text="\n".join(xml)
