@@ -41,6 +41,10 @@ class ProvidesOpenVIMCompute(RelationBase):
         convo = self.conversation()
         convo.set_remote('ssh_key_installed', True)
 
+    def send_compute_private_address(self, address):
+        convo = self.conversation()
+        convo.set_remote('private-address', address)
+
     def send_user(self, user):
         convo = self.conversation()
         convo.set_remote('user', user)
