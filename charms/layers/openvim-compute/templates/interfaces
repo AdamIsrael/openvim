@@ -1,0 +1,30 @@
+auto {{ interface }}
+iface {{ interface }} inet static
+	mtu {{ mtu }}
+
+auto {{ interface }}.1001
+iface {{ interface }}.1001 inet static
+	mtu {{ mtu - 4 }}
+
+# Create bridge interfaces
+{% for i in range(1, 21) %}
+
+virbrMan{{ i }}  vlan 20{{ '%02d' % i }}
+
+auto {{ interface }}.20{{ '%02d' % i }}
+iface {{ interface }}.20{{ '%02d' % i }} inet static
+	mtu {{ mtu - 4 }}
+
+auto virbrMan{{ i }}
+iface virbrMan{{ i }} inet static
+	bridge_ports {{ interface }}.20{{ '%02d' % i  }}
+	mtu {{ mtu - 4 }}
+
+{% endfor %}
+
+# auto {{ interface }}.1001
+# iface {{ interface }}.1001 inet static
+
+auto virbrInf
+iface virbrInf inet static
+	bridge_ports {{ interface }}.1001

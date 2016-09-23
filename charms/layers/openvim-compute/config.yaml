@@ -1,0 +1,13 @@
+options:
+    bridge_interface:
+        type: string
+        default: "eth1"
+        description: "The bridge interface."
+    bridge_mtu:
+        type: int
+        default: 2000
+        description: "The bridge interface's MTU"
+    bridge_vlan:
+        type: string
+        default: "2010"
+        description: "The bridge interface's VLAN id"

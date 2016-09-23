@@ -1,0 +1,9 @@
+# By default openvim assumes control plane interface naming as em1,em2,em3,em4
+# and bridge ifaces as virbrMan1, virbrMan2, ...
+# if compute node contain a different name it must be indicated in this file
+# with the format extandard-name: compute-name
+if [ "$interface" != "" -a "$interface" != "em1" ]
+then
+  echo "iface_names:"  >> /opt/VNF/images/hostinfo.yaml
+  echo "  em1: ${interface}" >> /opt/VNF/images/hostinfo.yaml
+fi
